@@ -243,42 +243,56 @@ function doPrint() {
 }
 
 function sendToNetPrinter() {
-  // Construire le ZPL avec l'image canvas
-  const canvas = document.getElementById('mycanvas');
-  const dataUrl = canvas.toDataURL('image/png');
-  
-  // Envoyer via l'intent Android rawbt://
-  const zplNum = num;
   const optsArr = Array.from(opts);
   
-  // Construire ZPL simple
-  let zpl = '^XA^PW400^LL200^MNN^CI28';
-  zpl += '^FO10,10^A0N,80,80^FD' + zplNum + '^FS';
-  if (optsArr.length > 0) {
-    zpl += '^FO160,10^GB2,180,2^FS';
-    const fSize = optsArr.length <= 3 ? 30 : 24;
+  // ZPL pour TD-2130N 50x25mm
+  let zpl = '^XA
+^PW400
+^LL200
+^MNN
+^CI28
+';
+  const fs = num.length === 1 ? 160 : num.length === 2 ? 140 : 110;
+  
+  if (optsArr.length === 0) {
+    const x = num.length === 1 ? 150 : num.length === 2 ? 110 : 70;
+    zpl += '^FO' + x + ',10^A0N,' + fs + ',' + fs + '^FD' + num + '^FS
+';
+  } else {
+    zpl += '^FO8,10^A0N,' + fs + ',' + fs + '^FD' + num + '^FS
+';
+    const sepX = num.length === 1 ? 145 : num.length === 2 ? 175 : 195;
+    zpl += '^FO' + sepX + ',5^GB2,190,2^FS
+';
+    const fso = optsArr.length <= 2 ? 32 : optsArr.length <= 3 ? 26 : optsArr.length <= 4 ? 22 : 18;
+    const startX = sepX + 10;
+    const totalH = optsArr.length * (fso + 10);
+    const startY = Math.floor((200 - totalH) / 2);
     optsArr.forEach((o, i) => {
-      const y = 10 + i * (fSize + 8);
-      zpl += '^FO170,' + y + '^A0N,' + fSize + ',' + fSize + '^FD' + optLabels[o] + '^FS';
+      const y = startY + i * (fso + 10);
+      zpl += '^FO' + startX + ',' + y + '^A0N,' + fso + ',' + fso + '^FD' + optLabels[o] + '^FS
+';
     });
   }
-  zpl += '^XZ';
+  zpl += '^XZ
+';
 
-  // Envoyer via rawbt intent
-  const encoded = btoa(unescape(encodeURIComponent(zpl)));
-  const url = 'rawbt:base64,' + encoded;
-  
-  // Essayer rawbt d'abord
-  const iframe = document.createElement('iframe');
-  iframe.style.display = 'none';
-  iframe.src = url;
-  document.body.appendChild(iframe);
-  
-  setTimeout(() => {
-    document.body.removeChild(iframe);
+  // Envoyer directement à l'imprimante via fetch
+  fetch('http://192.168.1.111:9100', {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'text/plain' },
+    body: zpl
+  }).then(() => {
     showToast('✓ CMD #' + num + ' envoyée !');
     setTimeout(() => resetAll(), 800);
-  }, 1000);
+  }).catch(() => {
+    // Fallback rawbt
+    const encoded = btoa(unescape(encodeURIComponent(zpl)));
+    window.location.href = 'rawbt:base64,' + encoded;
+    showToast('✓ CMD #' + num + ' envoyée !');
+    setTimeout(() => resetAll(), 1500);
+  });
 }
 
 function showToast(msg) {
