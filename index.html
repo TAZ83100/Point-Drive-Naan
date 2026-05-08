@@ -8,10 +8,9 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body { background: #f0f0f0; font-family: Arial, sans-serif; min-height: 100vh; padding: 12px; }
-  .header { display: flex; flex-direction: column; align-items: center; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 3px solid #CC0000; gap: 2px; }
-  .logo { font-size: 28px; font-weight: 900; color: #111; letter-spacing: -1px; }
-  .logo span { color: #CC0000; font-style: italic; }
-  .logo-sub { font-size: 11px; color: #888; font-style: italic; text-align: center; }
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 3px solid #CC0000; }
+  .logo { font-size: 20px; font-weight: 900; color: #111; }
+  .logo span { color: #CC0000; }
   .status { font-size: 11px; color: #555; }
   .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #22c55e; margin-right: 5px; }
   .display-zone { background: #222; border: 3px solid #555; border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; transition: border-color 0.2s; }
@@ -52,8 +51,7 @@
 
 <div id="main">
   <div class="header">
-    <div class="logo">POINT <span>Drive</span></div>
-    <div class="logo-sub">Colle cet autocollant sur ton emballage 🍔</div>
+    <div class="logo">POINT <span>DRIVE</span></div>
     <div class="status"><span class="dot"></span>Prêt</div>
   </div>
   <div class="display-zone" id="dz">
@@ -240,59 +238,6 @@ function doPrint() {
     }, 600);
   };
   img.src = dataUrl;
-}
-
-function sendToNetPrinter() {
-  const optsArr = Array.from(opts);
-  
-  // ZPL pour TD-2130N 50x25mm
-  let zpl = '^XA
-^PW400
-^LL200
-^MNN
-^CI28
-';
-  const fs = num.length === 1 ? 160 : num.length === 2 ? 140 : 110;
-  
-  if (optsArr.length === 0) {
-    const x = num.length === 1 ? 150 : num.length === 2 ? 110 : 70;
-    zpl += '^FO' + x + ',10^A0N,' + fs + ',' + fs + '^FD' + num + '^FS
-';
-  } else {
-    zpl += '^FO8,10^A0N,' + fs + ',' + fs + '^FD' + num + '^FS
-';
-    const sepX = num.length === 1 ? 145 : num.length === 2 ? 175 : 195;
-    zpl += '^FO' + sepX + ',5^GB2,190,2^FS
-';
-    const fso = optsArr.length <= 2 ? 32 : optsArr.length <= 3 ? 26 : optsArr.length <= 4 ? 22 : 18;
-    const startX = sepX + 10;
-    const totalH = optsArr.length * (fso + 10);
-    const startY = Math.floor((200 - totalH) / 2);
-    optsArr.forEach((o, i) => {
-      const y = startY + i * (fso + 10);
-      zpl += '^FO' + startX + ',' + y + '^A0N,' + fso + ',' + fso + '^FD' + optLabels[o] + '^FS
-';
-    });
-  }
-  zpl += '^XZ
-';
-
-  // Envoyer directement à l'imprimante via fetch
-  fetch('http://192.168.1.111:9100', {
-    method: 'POST',
-    mode: 'no-cors',
-    headers: { 'Content-Type': 'text/plain' },
-    body: zpl
-  }).then(() => {
-    showToast('✓ CMD #' + num + ' envoyée !');
-    setTimeout(() => resetAll(), 800);
-  }).catch(() => {
-    // Fallback rawbt
-    const encoded = btoa(unescape(encodeURIComponent(zpl)));
-    window.location.href = 'rawbt:base64,' + encoded;
-    showToast('✓ CMD #' + num + ' envoyée !');
-    setTimeout(() => resetAll(), 1500);
-  });
 }
 
 function showToast(msg) {
